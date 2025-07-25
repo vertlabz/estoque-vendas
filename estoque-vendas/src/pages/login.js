@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -54,10 +55,9 @@ export default function LoginPage() {
             Entrar
           </button>
         </form>
-        <p className="text-gray-400 text-sm text-center mt-4">
-          Não tem conta?{" "}
-          <a href="/register" className="text-blue-400 hover:underline">Registrar</a>
-        </p>
+        <Link href="/register" className="text-blue-400 hover:underline">
+          Criar conta
+      </Link>
       </div>
     </div>
   );
