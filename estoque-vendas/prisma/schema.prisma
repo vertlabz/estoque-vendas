@@ -1,41 +1,87 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
 
 generator client {
   provider = "prisma-client-js"
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  password String
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("vendedor") // admin, vendedor, estoque
   createdAt DateTime @default(now())
+  sales     Sale[]
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String
+  products  Product[]
 }
 
 model Product {
-  id       Int       @id @default(autoincrement())
-  name     String
-  price    Float
-  createdAt DateTime @default(now())
+  id           Int        @id @default(autoincrement())
+  name         String
+  category     Category?  @relation(fields: [categoryId], references: [id])
+  categoryId   Int?
+  price        Float
+  costPrice    Float
+  stock        Int        @default(0)
+  multiplier   Int        @default(1) // Ex: 12 para caixas
+  parentId     Int?       // Produto pai (caixa/lata)
+  parent       Product?   @relation("ProductChildren", fields: [parentId], references: [id])
+  children     Product[]  @relation("ProductChildren")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  saleItems    SaleItem[]
+  supplierId   Int?
+  supplier     Supplier?  @relation(fields: [supplierId], references: [id])
+}
 
-  saleItems SaleItem[]
+model Supplier {
+  id        Int       @id @default(autoincrement())
+  name      String
+  contact   String?
+  cnpj      String?
+  email     String?
+  products  Product[]
+}
+
+model Client {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String?
+  address   String?
+  cpfCnpj   String?
+  sales     Sale[]
 }
 
 model Sale {
-  id        Int        @id @default(autoincrement())
-  createdAt DateTime   @default(now())
-  total     Float
-  items     SaleItem[]
+  id          Int        @id @default(autoincrement())
+  user        User       @relation(fields: [userId], references: [id])
+  userId      Int
+  client      Client?    @relation(fields: [clientId], references: [id])
+  clientId    Int?
+  total       Float
+  payment     String     @default("dinheiro") // dinheiro, cartão, pix
+  discount    Float      @default(0)
+  createdAt   DateTime   @default(now())
+  items       SaleItem[]
 }
 
 model SaleItem {
-  id        Int     @id @default(autoincrement())
-  sale      Sale    @relation(fields: [saleId], references: [id])
+  id        Int      @id @default(autoincrement())
+  sale      Sale     @relation(fields: [saleId], references: [id])
   saleId    Int
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
   productId Int
   quantity  Int
-  price     Float   // preço unitário no momento da venda
+  price     Float
+  costPrice Float
+  total     Float
 }
