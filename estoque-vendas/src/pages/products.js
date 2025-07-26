@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [form, setForm] = useState({ name: '', price: '' });
+  const [form, setForm] = useState({ name: '', price: '', costPrice: '' });
 
   useEffect(() => {
     fetchProducts();
@@ -38,8 +38,8 @@ export default function ProductsPage() {
 
     const method = editingProduct ? 'PUT' : 'POST';
     const body = editingProduct
-      ? { id: editingProduct.id, name: form.name, price: parseFloat(form.price) }
-      : { name: form.name, price: parseFloat(form.price) };
+      ? { id: editingProduct.id, name: form.name, price: parseFloat(form.price), costPrice: parseFloat(form.costPrice) }
+      : { name: form.name, price: parseFloat(form.price), costPrice: parseFloat(form.costPrice) };
 
     const res = await fetch('/api/products', {
       method,
@@ -98,7 +98,21 @@ export default function ProductsPage() {
           placeholder="Preço (ex: 4.50)"
           className="w-full p-3 rounded bg-gray-800 border border-gray-600"
           required
+
+          
         />
+        <input
+          name="costPrice"
+          type="number"
+          step="0.01"
+          value={form.costPrice}
+          onChange={handleInputChange}
+          placeholder="Preço de custo (ex: 2.50)"
+          className="w-full p-3 rounded bg-gray-800 border border-gray-600"
+          required
+        />
+
+
         <div>
           <button
             type="submit"
