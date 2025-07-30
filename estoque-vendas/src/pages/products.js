@@ -90,6 +90,14 @@ export default function ProductsPage() {
           required
         />
         <input
+          name="name"
+          value={form.name}
+          onChange={handleInputChange}
+          placeholder="Nome do produto"
+          className="w-full p-3 rounded bg-gray-800 border border-gray-600"
+          required
+        />
+        <input
           name="price"
           type="number"
           step="0.01"
@@ -111,7 +119,7 @@ export default function ProductsPage() {
           className="w-full p-3 rounded bg-gray-800 border border-gray-600"
           required
         />
-
+        
 
         <div>
           <button
