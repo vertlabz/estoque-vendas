@@ -16,13 +16,11 @@ model User {
   createdAt DateTime  @default(now())
   sales     Sale[]
 }
-
 model Category {
-  id        Int       @id @default(autoincrement())
-  name      String?
-  products  Product[]
+  id       Int        @id @default(autoincrement())
+  name     String     @unique   // 🔹 precisa ser único
+  products Product[]
 }
-
 model Product {
   id           Int        @id @default(autoincrement())
   name         String?
@@ -38,8 +36,9 @@ model Product {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   saleItems    SaleItem[]
+
   supplierId   Int?
-  supplier     Supplier?  @relation(fields: [supplierId], references: [id])
+  supplier     Supplier? @relation(fields: [supplierId], references: [id])
 }
 
 model Supplier {
@@ -48,9 +47,8 @@ model Supplier {
   contact   String?
   cnpj      String?
   email     String?
-  products  Product[]
+  products  Product[] // relação reversa
 }
-
 model Client {
   id        Int       @id @default(autoincrement())
   name      String?
