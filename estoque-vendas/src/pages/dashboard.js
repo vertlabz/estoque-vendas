@@ -12,14 +12,18 @@ export default function Dashboard() {
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
+  const [commandas, setCommandas] = useState([]);
+  const [selectedComanda, setSelectedComanda] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Redireciona para login se não tiver token
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) router.push('/login');
   }, [router]);
 
-  // Busca produtos do backend
   useEffect(() => {
     async function loadProducts() {
       const res = await fetch('/api/products');
@@ -29,7 +33,6 @@ export default function Dashboard() {
     loadProducts();
   }, []);
 
-  // Funções do carrinho
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -78,41 +81,98 @@ export default function Dashboard() {
     }
   };
 
-  // Função para navegar nas abas do menu
-  const goTo = (path) => {
-    router.push(path);
+  const handleCreateComanda = () => {
+    if (!clientName) return alert('Informe o nome do cliente');
+    const id = Date.now();
+    setCommandas((prev) => [...prev, { id, clientName, items: [] }]);
+    setClientName('');
+    setShowModal(false);
   };
+
+  const handleAddToComanda = () => {
+    setShowModal(true);
+    setModalType('add');
+  };
+
+  const addItemsToComanda = (comandaId) => {
+    setCommandas((prev) =>
+      prev.map((c) =>
+        c.id === comandaId ? { ...c, items: [...c.items, ...cart] } : c
+      )
+    );
+    setCart([]);
+    setShowModal(false);
+  };
+
+  const handleFinalizeComanda = () => {
+    setShowModal(true);
+    setModalType('finalize');
+  };
+
+  const finalizeSelectedComanda = async () => {
+    if (!selectedComanda) return;
+    const comanda = commandas.find((c) => c.id === selectedComanda);
+    if (!comanda || comanda.items.length === 0) return;
+
+    try {
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: comanda.items }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(`Erro: ${data.message}`);
+        return;
+      }
+      alert('Comanda finalizada com sucesso!');
+      setCommandas((prev) => prev.filter((c) => c.id !== selectedComanda));
+      setSelectedComanda(null);
+      setShowModal(false);
+    } catch (err) {
+      alert('Erro ao finalizar comanda');
+      console.error(err);
+    }
+  };
+
+  const filteredProducts = products.filter((p) =>
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
-      {/* Menu lateral */}
-
       <Layout>
-        {/* Conteúdo principal - Dashboard */}
-        <main className="flex-1 p-6 flex flex-col sm:flex-row gap-6">
-          {/* Lista de produtos */}
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="bg-gray-800 p-4 rounded-lg flex flex-col items-center justify-between"
-              >
-                <h2 className="text-lg font-bold">{product.name}</h2>
-                <p className="text-blue-400 font-semibold">
-                  R$ {product.price.toFixed(2)}
-                </p>
-                <button
-                  onClick={() => addToCart(product)}
-                  className="mt-3 bg-green-600 px-6 py-3 rounded-lg hover:bg-green-700 transition w-full text-lg"
+        <main className="flex-1 p-4 flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Buscar produto..."
+              className="w-full mb-4 p-2 rounded bg-gray-700 text-white"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-gray-800 p-4 rounded-lg flex flex-col items-center"
                 >
-                  + Adicionar
-                </button>
-              </div>
-            ))}
+                  <h2 className="text-lg font-bold">{product.name}</h2>
+                  <p className="text-blue-400 font-semibold">
+                    R$ {product.price.toFixed(2)}
+                  </p>
+                  <button
+                    onClick={() => addToCart(product)}
+                    className="mt-3 bg-green-600 px-6 py-3 rounded-lg hover:bg-green-700 transition w-full text-lg"
+                  >
+                    + Adicionar
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Carrinho */}
-          <div className="w-full sm:w-96 bg-gray-800 p-6 flex flex-col justify-between rounded-lg">
+          <div className="w-full sm:w-96 bg-gray-800 p-6 rounded-lg flex flex-col justify-between">
             <div>
               <h2 className="text-xl font-bold mb-6">Carrinho</h2>
               {cart.length === 0 ? (
@@ -129,59 +189,125 @@ export default function Dashboard() {
                         R$ {(item.price * item.qty).toFixed(2)}
                       </p>
                     </div>
-
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => updateQty(item.id, item.qty - 1)}
-                        className="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-xl select-none"
-                        aria-label={`Diminuir quantidade de ${item.name}`}
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.qty}
-                        onChange={(e) =>
-                          updateQty(item.id, parseInt(e.target.value) || 1)
-                        }
-                        className="w-16 text-center rounded bg-gray-600 text-white"
-                      />
-                      <button
-                        onClick={() => updateQty(item.id, item.qty + 1)}
-                        className="bg-green-600 px-3 py-1 rounded hover:bg-green-700 text-xl select-none"
-                        aria-label={`Aumentar quantidade de ${item.name}`}
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="ml-3 bg-red-700 px-3 py-1 rounded hover:bg-red-800"
-                        aria-label={`Remover ${item.name} do carrinho`}
-                      >
-                        🗑️
-                      </button>
+                      <button onClick={() => updateQty(item.id, item.qty - 1)} className="bg-red-600 px-3 py-1 rounded">−</button>
+                      <input type="number" min="1" value={item.qty} onChange={(e) => updateQty(item.id, parseInt(e.target.value) || 1)} className="w-16 text-center rounded bg-gray-600 text-white" />
+                      <button onClick={() => updateQty(item.id, item.qty + 1)} className="bg-green-600 px-3 py-1 rounded">+</button>
+                      <button onClick={() => removeFromCart(item.id)} className="ml-2 bg-red-700 px-3 py-1 rounded">🗑️</button>
                     </div>
                   </div>
                 ))
               )}
             </div>
-
             <div>
               <div className="flex justify-between font-bold text-lg mb-4">
                 <span>Total:</span>
                 <span>R$ {total.toFixed(2)}</span>
               </div>
-              <button
-                onClick={finalizeSale}
-                disabled={cart.length === 0}
-                className="bg-blue-600 w-full py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-600"
-              >
+              <button onClick={finalizeSale} disabled={cart.length === 0} className="bg-blue-600 w-full py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-600">
                 Finalizar Venda
               </button>
+              <div className="mt-4 space-y-2">
+                <button onClick={() => { setModalType('create'); setShowModal(true); }} className="bg-yellow-600 w-full py-2 rounded hover:bg-yellow-700">
+                  Criar Comanda
+                </button>
+                <button onClick={handleAddToComanda} className="bg-purple-600 w-full py-2 rounded hover:bg-purple-700">
+                  Adicionar à Comanda
+                </button>
+                <button onClick={handleFinalizeComanda} className="bg-pink-600 w-full py-2 rounded hover:bg-pink-700">
+                  Finalizar Comanda
+                </button>
+              </div>
             </div>
           </div>
         </main>
+
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+              {modalType === 'create' && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Criar Comanda</h2>
+                  <input
+                    type="text"
+                    placeholder="Nome do cliente"
+                    className="w-full p-2 rounded bg-gray-700 text-white mb-4"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                  />
+                  <button onClick={handleCreateComanda} className="bg-green-600 w-full py-2 rounded hover:bg-green-700">
+                    Abrir Comanda
+                  </button>
+                </div>
+              )}
+              {modalType === 'add' && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Selecionar Comanda</h2>
+                  {commandas.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => addItemsToComanda(c.id)}
+                      className="w-full bg-gray-700 py-2 rounded mb-2 hover:bg-gray-600"
+                    >
+                      {c.clientName}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {modalType === 'finalize' && (
+  <div>
+    <h2 className="text-xl font-bold mb-4">Finalizar Comanda</h2>
+    <div className="space-y-2 mb-4">
+      {commandas.map((c) => (
+        <button
+          key={c.id}
+          onClick={() => setSelectedComanda(c.id)}
+          className={`w-full py-2 rounded ${selectedComanda === c.id ? 'bg-green-700' : 'bg-gray-700 hover:bg-gray-600'}`}
+        >
+          {c.clientName}
+        </button>
+      ))}
+    </div>
+
+    {selectedComanda && (
+      <div className="bg-gray-700 p-4 rounded mb-4 max-h-64 overflow-y-auto">
+        <h3 className="text-lg font-bold mb-2">Itens da Comanda</h3>
+        {commandas.find((c) => c.id === selectedComanda)?.items.map((item, idx) => (
+          <div key={idx} className="flex justify-between text-sm border-b border-gray-600 py-1">
+            <span>{item.name} x{item.qty}</span>
+            <span>R$ {(item.price * item.qty).toFixed(2)}</span>
+          </div>
+        ))}
+        <div className="mt-2 font-bold flex justify-between">
+          <span>Total:</span>
+          <span>
+            R$
+            {commandas
+              .find((c) => c.id === selectedComanda)
+              ?.items.reduce((acc, item) => acc + item.price * item.qty, 0)
+              .toFixed(2)}
+          </span>
+        </div>
+      </div>
+    )}
+
+    {selectedComanda && (
+      <button
+        onClick={finalizeSelectedComanda}
+        className="w-full bg-blue-600 py-2 rounded hover:bg-blue-700"
+      >
+        Confirmar Finalização
+      </button>
+    )}
+  </div>
+)}
+
+              <button onClick={() => setShowModal(false)} className="mt-4 w-full bg-red-600 py-2 rounded hover:bg-red-700">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </Layout>
     </div>
   );
