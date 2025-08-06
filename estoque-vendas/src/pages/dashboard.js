@@ -32,6 +32,18 @@ export default function Dashboard() {
     }
     loadProducts();
   }, []);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+
+  useEffect(() => {
+    async function loadCategories() {
+      const res = await fetch('/api/categories');
+      const data = await res.json();
+      setCategories(data);
+    }
+    loadCategories();
+  }, []);
+
 
   const addToCart = (product) => {
     setCart((prev) => {
@@ -135,9 +147,13 @@ export default function Dashboard() {
     }
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory ? p.category?.id === selectedCategory : true;
+    return matchesSearch && matchesCategory;
+  });
+
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
@@ -151,6 +167,24 @@ export default function Dashboard() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-4 py-2 rounded ${selectedCategory === null ? 'bg-blue-600' : 'bg-gray-700'} hover:bg-blue-700`}
+              >
+                Todos
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-4 py-2 rounded ${selectedCategory === cat.id ? 'bg-blue-600' : 'bg-gray-700'} hover:bg-blue-700`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProducts.map((product) => (
                 <div
@@ -172,7 +206,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="w-full sm:w-96 bg-gray-800 p-6 rounded-lg flex flex-col justify-between">
+          <div className="w-full sm:w-96 bg-gray-800 p-6 rounded-lg flex flex-col gap-6">
             <div>
               <h2 className="text-xl font-bold mb-6">Carrinho</h2>
               {cart.length === 0 ? (
@@ -255,52 +289,52 @@ export default function Dashboard() {
                 </div>
               )}
               {modalType === 'finalize' && (
-  <div>
-    <h2 className="text-xl font-bold mb-4">Finalizar Comanda</h2>
-    <div className="space-y-2 mb-4">
-      {commandas.map((c) => (
-        <button
-          key={c.id}
-          onClick={() => setSelectedComanda(c.id)}
-          className={`w-full py-2 rounded ${selectedComanda === c.id ? 'bg-green-700' : 'bg-gray-700 hover:bg-gray-600'}`}
-        >
-          {c.clientName}
-        </button>
-      ))}
-    </div>
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Finalizar Comanda</h2>
+                  <div className="space-y-2 mb-4">
+                    {commandas.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedComanda(c.id)}
+                        className={`w-full py-2 rounded ${selectedComanda === c.id ? 'bg-green-700' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      >
+                        {c.clientName}
+                      </button>
+                    ))}
+                  </div>
 
-    {selectedComanda && (
-      <div className="bg-gray-700 p-4 rounded mb-4 max-h-64 overflow-y-auto">
-        <h3 className="text-lg font-bold mb-2">Itens da Comanda</h3>
-        {commandas.find((c) => c.id === selectedComanda)?.items.map((item, idx) => (
-          <div key={idx} className="flex justify-between text-sm border-b border-gray-600 py-1">
-            <span>{item.name} x{item.qty}</span>
-            <span>R$ {(item.price * item.qty).toFixed(2)}</span>
-          </div>
-        ))}
-        <div className="mt-2 font-bold flex justify-between">
-          <span>Total:</span>
-          <span>
-            R$
-            {commandas
-              .find((c) => c.id === selectedComanda)
-              ?.items.reduce((acc, item) => acc + item.price * item.qty, 0)
-              .toFixed(2)}
-          </span>
-        </div>
-      </div>
-    )}
+                  {selectedComanda && (
+                    <div className="bg-gray-700 p-4 rounded mb-4 max-h-64 overflow-y-auto">
+                      <h3 className="text-lg font-bold mb-2">Itens da Comanda</h3>
+                      {commandas.find((c) => c.id === selectedComanda)?.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm border-b border-gray-600 py-1">
+                          <span>{item.name} x{item.qty}</span>
+                          <span>R$ {(item.price * item.qty).toFixed(2)}</span>
+                        </div>
+                      ))}
+                      <div className="mt-2 font-bold flex justify-between">
+                        <span>Total:</span>
+                        <span>
+                          R$
+                          {commandas
+                            .find((c) => c.id === selectedComanda)
+                            ?.items.reduce((acc, item) => acc + item.price * item.qty, 0)
+                            .toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
-    {selectedComanda && (
-      <button
-        onClick={finalizeSelectedComanda}
-        className="w-full bg-blue-600 py-2 rounded hover:bg-blue-700"
-      >
-        Confirmar Finalização
-      </button>
-    )}
-  </div>
-)}
+                  {selectedComanda && (
+                    <button
+                      onClick={finalizeSelectedComanda}
+                      className="w-full bg-blue-600 py-2 rounded hover:bg-blue-700"
+                    >
+                      Confirmar Finalização
+                    </button>
+                  )}
+                </div>
+              )}
 
               <button onClick={() => setShowModal(false)} className="mt-4 w-full bg-red-600 py-2 rounded hover:bg-red-700">
                 Cancelar
