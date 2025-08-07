@@ -18,6 +18,10 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [pendingCallback, setPendingCallback] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -38,7 +42,6 @@ export default function Dashboard() {
       syncPendingSales();
     };
     window.addEventListener('online', handleOnline);
-    // tenta sincronizar ao carregar
     syncPendingSales();
     const interval = setInterval(syncPendingSales, 5 * 60 * 1000);
     return () => {
@@ -46,6 +49,7 @@ export default function Dashboard() {
       clearInterval(interval);
     };
   }, []);
+
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
@@ -73,7 +77,6 @@ export default function Dashboard() {
     loadComandas();
   }, []);
 
-
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -100,6 +103,38 @@ export default function Dashboard() {
   };
 
   const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+  const openPaymentModal = (items, callback, msg) => {
+    setPendingItems(items);
+    setPendingCallback(() => callback);
+    setSuccessMessage(msg);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSelection = async (method) => {
+    try {
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: pendingItems, metodoPagamento: method }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(`Erro: ${data.message}`);
+        return;
+      }
+      if (pendingCallback) pendingCallback();
+      alert(successMessage || 'Venda salva com sucesso!');
+    } catch (err) {
+      alert('Erro ao salvar venda');
+      console.error(err);
+    } finally {
+      setShowPaymentModal(false);
+      setPendingItems([]);
+      setPendingCallback(null);
+      setSuccessMessage('');
+    }
+  };
 
   const finalizeSale = async () => {
     if (cart.length === 0) return;
@@ -173,48 +208,41 @@ export default function Dashboard() {
 
   const finalizeSelectedComanda = async () => {
     if (!selectedComanda) return;
-const comanda = comandas.find((c) => c.id === selectedComanda);
-if (!comanda || comanda.items.length === 0) return;
+    const comanda = comandas.find((c) => c.id === selectedComanda);
+    if (!comanda || comanda.items.length === 0) return;
 
-const offlineId = crypto.randomUUID();
-const saleData = { offlineId, items: comanda.items };
+    const offlineId = crypto.randomUUID();
+    const saleData = { offlineId, items: comanda.items };
 
-if (navigator.onLine) {
-  try {
-    const res = await fetch(`/api/comandas/${selectedComanda}/finalize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(saleData),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      alert(`Erro: ${data.message}`);
-      return;
-    }
-    alert('Comanda finalizada com sucesso!');
-    setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
-    setSelectedComanda(null);
-    setShowModal(false);
-    await syncPendingSales();
-  } catch (err) {
-    alert('Erro ao finalizar comanda');
-    console.error(err);
-  }
-} else {
-  saveSaleOffline(saleData);
-  alert('Comanda salva offline e será sincronizada quando voltar a internet.');
-}
-
+    if (navigator.onLine) {
+      try {
+        const res = await fetch(`/api/comandas/${selectedComanda}/finalize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(saleData),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert(`Erro: ${data.message}`);
+          return;
+        }
+        alert('Comanda finalizada com sucesso!');
+        setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
+        setSelectedComanda(null);
+        setShowModal(false);
+        await syncPendingSales();
+      } catch (err) {
+        alert('Erro ao finalizar comanda');
+        console.error(err);
       }
     } else {
       await saveSaleOffline(saleData);
-      alert('Sem conexão. Comanda salva localmente!');
+      alert('Comanda salva offline e será sincronizada quando voltar a internet.');
       setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
       setSelectedComanda(null);
       setShowModal(false);
     }
   };
-
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -399,6 +427,35 @@ if (navigator.onLine) {
               )}
 
               <button onClick={() => setShowModal(false)} className="mt-4 w-full bg-red-600 py-2 rounded hover:bg-red-700">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">Método de Pagamento</h2>
+              <div className="space-y-2 mb-4">
+                {['Pix', 'Cartão de crédito', 'Cartão de débito', 'Dinheiro', 'Outro'].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => handlePaymentSelection(m)}
+                    className="w-full bg-gray-700 py-2 rounded mb-2 hover:bg-gray-600"
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPendingItems([]);
+                  setPendingCallback(null);
+                  setSuccessMessage('');
+                }}
+                className="w-full bg-red-600 py-2 rounded hover:bg-red-700"
+              >
                 Cancelar
               </button>
             </div>
