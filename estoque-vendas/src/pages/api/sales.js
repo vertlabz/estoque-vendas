@@ -21,17 +21,23 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { items } = req.body;
+    const { items, offlineId } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Itens da venda são obrigatórios' });
     }
 
     try {
+      if (offlineId) {
+        const existing = await prisma.sale.findUnique({ where: { offlineId } });
+        if (existing) return res.status(200).json(existing);
+      }
+
       const total = items.reduce((acc, item) => acc + item.price * item.qty, 0);
 
       const sale = await prisma.sale.create({
         data: {
+          offlineId,
           total,
           items: {
             create: items.map((item) => ({
