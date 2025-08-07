@@ -29,6 +29,7 @@ model Product {
   price        Float?
   costPrice    Float?
   stock        Int        @default(0)
+  estoqueMinimo Int       @default(0)
   multiplier   Int        @default(1)
   parentId     Int?
   parent       Product?   @relation("ProductChildren", fields: [parentId], references: [id])
@@ -36,6 +37,7 @@ model Product {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   saleItems    SaleItem[]
+  comandaItems ComandaItem[]
 
   supplierId   Int?
   supplier     Supplier? @relation(fields: [supplierId], references: [id])
@@ -81,4 +83,21 @@ model SaleItem {
   price     Float?
   costPrice Float?
   total     Float?
+}
+
+model Comanda {
+  id        Int           @id @default(autoincrement())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    String        @default("aberta")
+  itens     ComandaItem[]
+}
+
+model ComandaItem {
+  id        Int      @id @default(autoincrement())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int
+  quantidade Int
+  comanda   Comanda  @relation(fields: [comandaId], references: [id])
+  comandaId Int
 }
