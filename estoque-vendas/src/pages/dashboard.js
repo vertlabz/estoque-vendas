@@ -12,7 +12,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
-  const [commandas, setCommandas] = useState([]);
+  const [comandas, setComandas] = useState([]);
   const [selectedComanda, setSelectedComanda] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
@@ -96,7 +96,7 @@ export default function Dashboard() {
   const handleCreateComanda = () => {
     if (!clientName) return alert('Informe o nome do cliente');
     const id = Date.now();
-    setCommandas((prev) => [...prev, { id, clientName, items: [] }]);
+    setComandas((prev) => [...prev, { id, clientName, items: [] }]);
     setClientName('');
     setShowModal(false);
   };
@@ -107,7 +107,7 @@ export default function Dashboard() {
   };
 
   const addItemsToComanda = (comandaId) => {
-    setCommandas((prev) =>
+    setComandas((prev) =>
       prev.map((c) =>
         c.id === comandaId ? { ...c, items: [...c.items, ...cart] } : c
       )
@@ -123,7 +123,7 @@ export default function Dashboard() {
 
   const finalizeSelectedComanda = async () => {
     if (!selectedComanda) return;
-    const comanda = commandas.find((c) => c.id === selectedComanda);
+    const comanda = comandas.find((c) => c.id === selectedComanda);
     if (!comanda || comanda.items.length === 0) return;
 
     try {
@@ -138,7 +138,7 @@ export default function Dashboard() {
         return;
       }
       alert('Comanda finalizada com sucesso!');
-      setCommandas((prev) => prev.filter((c) => c.id !== selectedComanda));
+      setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
       setSelectedComanda(null);
       setShowModal(false);
     } catch (err) {
@@ -277,7 +277,7 @@ export default function Dashboard() {
               {modalType === 'add' && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">Selecionar Comanda</h2>
-                  {commandas.map((c) => (
+                  {comandas.map((c) => (
                     <button
                       key={c.id}
                       onClick={() => addItemsToComanda(c.id)}
@@ -292,7 +292,7 @@ export default function Dashboard() {
                 <div>
                   <h2 className="text-xl font-bold mb-4">Finalizar Comanda</h2>
                   <div className="space-y-2 mb-4">
-                    {commandas.map((c) => (
+                    {comandas.map((c) => (
                       <button
                         key={c.id}
                         onClick={() => setSelectedComanda(c.id)}
@@ -306,7 +306,7 @@ export default function Dashboard() {
                   {selectedComanda && (
                     <div className="bg-gray-700 p-4 rounded mb-4 max-h-64 overflow-y-auto">
                       <h3 className="text-lg font-bold mb-2">Itens da Comanda</h3>
-                      {commandas.find((c) => c.id === selectedComanda)?.items.map((item, idx) => (
+                      {comandas.find((c) => c.id === selectedComanda)?.items.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm border-b border-gray-600 py-1">
                           <span>{item.name} x{item.qty}</span>
                           <span>R$ {(item.price * item.qty).toFixed(2)}</span>
@@ -316,7 +316,7 @@ export default function Dashboard() {
                         <span>Total:</span>
                         <span>
                           R$
-                          {commandas
+                          {comandas
                             .find((c) => c.id === selectedComanda)
                             ?.items.reduce((acc, item) => acc + item.price * item.qty, 0)
                             .toFixed(2)}
