@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { items, metodoPagamento } = req.body;
+    const { items, metodoPagamento, offlineId } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res
@@ -36,6 +36,12 @@ export default async function handler(req, res) {
     }
 
     try {
+      // Se for venda offline, evitar duplicar
+      if (offlineId) {
+        const existing = await prisma.sale.findUnique({ where: { offlineId } });
+        if (existing) return res.status(200).json(existing);
+      }
+
       const total = items.reduce(
         (acc, item) => acc + item.price * item.qty,
         0
@@ -43,6 +49,7 @@ export default async function handler(req, res) {
 
       const sale = await prisma.sale.create({
         data: {
+          offlineId,
           total,
           metodoPagamento: String(metodoPagamento),
           items: {

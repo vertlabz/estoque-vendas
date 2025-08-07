@@ -7,6 +7,7 @@ import {
 } from 'react-icons/md';
 import { useRouter } from 'next/router';
 import Layout from './layout';
+import { saveSaleOffline, syncPendingSales } from '@/lib/offlineSales';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -16,7 +17,6 @@ export default function Dashboard() {
   const [selectedComanda, setSelectedComanda] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
-  const [clientName, setClientName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingItems, setPendingItems] = useState([]);
@@ -36,6 +36,20 @@ export default function Dashboard() {
     }
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      syncPendingSales();
+    };
+    window.addEventListener('online', handleOnline);
+    syncPendingSales();
+    const interval = setInterval(syncPendingSales, 5 * 60 * 1000);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      clearInterval(interval);
+    };
+  }, []);
+
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
@@ -48,6 +62,20 @@ export default function Dashboard() {
     loadCategories();
   }, []);
 
+  const loadComandas = async () => {
+    const res = await fetch('/api/comandas');
+    let data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      const resCreate = await fetch('/api/comandas', { method: 'POST' });
+      const nova = await resCreate.json();
+      data = [nova];
+    }
+    setComandas(data.map((c) => ({ ...c, items: c.itens || [] })));
+  };
+
+  useEffect(() => {
+    loadComandas();
+  }, []);
 
   const addToCart = (product) => {
     setCart((prev) => {
@@ -108,17 +136,46 @@ export default function Dashboard() {
     }
   };
 
-  const finalizeSale = () => {
+  const finalizeSale = async () => {
     if (cart.length === 0) return;
-    openPaymentModal(cart, () => setCart([]), 'Venda salva com sucesso!');
+    const offlineId = crypto.randomUUID();
+    const saleData = { offlineId, items: cart };
+    if (navigator.onLine) {
+      try {
+        const res = await fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(saleData),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert(`Erro: ${data.message}`);
+          return;
+        }
+        alert('Venda salva com sucesso!');
+        setCart([]);
+        await syncPendingSales();
+      } catch (err) {
+        alert('Erro ao salvar venda');
+        console.error(err);
+      }
+    } else {
+      await saveSaleOffline(saleData);
+      alert('Sem conexão. Venda salva localmente!');
+      setCart([]);
+    }
   };
 
-  const handleCreateComanda = () => {
-    if (!clientName) return alert('Informe o nome do cliente');
-    const id = Date.now();
-    setComandas((prev) => [...prev, { id, clientName, items: [] }]);
-    setClientName('');
-    setShowModal(false);
+  const handleCreateComanda = async () => {
+    try {
+      const res = await fetch('/api/comandas', { method: 'POST' });
+      if (!res.ok) throw new Error('Erro ao criar comanda');
+      const nova = await res.json();
+      setComandas((prev) => [...prev, { ...nova, items: [] }]);
+    } catch (err) {
+      alert('Erro ao criar comanda');
+      console.error(err);
+    }
   };
 
   const handleAddToComanda = () => {
@@ -126,14 +183,22 @@ export default function Dashboard() {
     setModalType('add');
   };
 
-  const addItemsToComanda = (comandaId) => {
-    setComandas((prev) =>
-      prev.map((c) =>
-        c.id === comandaId ? { ...c, items: [...c.items, ...cart] } : c
-      )
-    );
-    setCart([]);
-    setShowModal(false);
+  const addItemsToComanda = async (comandaId) => {
+    try {
+      for (const item of cart) {
+        await fetch(`/api/comandas/${comandaId}/items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: item.id, quantidade: item.qty }),
+        });
+      }
+      await loadComandas();
+      setCart([]);
+      setShowModal(false);
+    } catch (err) {
+      alert('Erro ao adicionar itens à comanda');
+      console.error(err);
+    }
   };
 
   const handleFinalizeComanda = () => {
@@ -141,22 +206,43 @@ export default function Dashboard() {
     setModalType('finalize');
   };
 
-  const finalizeSelectedComanda = () => {
+  const finalizeSelectedComanda = async () => {
     if (!selectedComanda) return;
     const comanda = comandas.find((c) => c.id === selectedComanda);
     if (!comanda || comanda.items.length === 0) return;
 
-    openPaymentModal(
-      comanda.items,
-      () => {
+    const offlineId = crypto.randomUUID();
+    const saleData = { offlineId, items: comanda.items };
+
+    if (navigator.onLine) {
+      try {
+        const res = await fetch(`/api/comandas/${selectedComanda}/finalize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(saleData),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert(`Erro: ${data.message}`);
+          return;
+        }
+        alert('Comanda finalizada com sucesso!');
         setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
         setSelectedComanda(null);
         setShowModal(false);
-      },
-      'Comanda finalizada com sucesso!'
-    );
+        await syncPendingSales();
+      } catch (err) {
+        alert('Erro ao finalizar comanda');
+        console.error(err);
+      }
+    } else {
+      await saveSaleOffline(saleData);
+      alert('Comanda salva offline e será sincronizada quando voltar a internet.');
+      setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
+      setSelectedComanda(null);
+      setShowModal(false);
+    }
   };
-
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -252,7 +338,7 @@ export default function Dashboard() {
                 Finalizar Venda
               </button>
               <div className="mt-4 space-y-2">
-                <button onClick={() => { setModalType('create'); setShowModal(true); }} className="bg-yellow-600 w-full py-2 rounded hover:bg-yellow-700">
+                <button onClick={handleCreateComanda} className="bg-yellow-600 w-full py-2 rounded hover:bg-yellow-700">
                   Criar Comanda
                 </button>
                 <button onClick={handleAddToComanda} className="bg-purple-600 w-full py-2 rounded hover:bg-purple-700">
@@ -269,21 +355,6 @@ export default function Dashboard() {
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
-              {modalType === 'create' && (
-                <div>
-                  <h2 className="text-xl font-bold mb-4">Criar Comanda</h2>
-                  <input
-                    type="text"
-                    placeholder="Nome do cliente"
-                    className="w-full p-2 rounded bg-gray-700 text-white mb-4"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                  />
-                  <button onClick={handleCreateComanda} className="bg-green-600 w-full py-2 rounded hover:bg-green-700">
-                    Abrir Comanda
-                  </button>
-                </div>
-              )}
               {modalType === 'add' && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">Selecionar Comanda</h2>
@@ -293,7 +364,7 @@ export default function Dashboard() {
                       onClick={() => addItemsToComanda(c.id)}
                       className="w-full bg-gray-700 py-2 rounded mb-2 hover:bg-gray-600"
                     >
-                      {c.clientName}
+                      {`Comanda #${c.id}`}
                     </button>
                   ))}
                 </div>
@@ -308,7 +379,7 @@ export default function Dashboard() {
                         onClick={() => setSelectedComanda(c.id)}
                         className={`w-full py-2 rounded ${selectedComanda === c.id ? 'bg-green-700' : 'bg-gray-700 hover:bg-gray-600'}`}
                       >
-                        {c.clientName}
+                        {`Comanda #${c.id}`}
                       </button>
                     ))}
                   </div>
@@ -316,19 +387,28 @@ export default function Dashboard() {
                   {selectedComanda && (
                     <div className="bg-gray-700 p-4 rounded mb-4 max-h-64 overflow-y-auto">
                       <h3 className="text-lg font-bold mb-2">Itens da Comanda</h3>
-                      {comandas.find((c) => c.id === selectedComanda)?.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm border-b border-gray-600 py-1">
-                          <span>{item.name} x{item.qty}</span>
-                          <span>R$ {(item.price * item.qty).toFixed(2)}</span>
-                        </div>
-                      ))}
+                      {comandas
+                        .find((c) => c.id === selectedComanda)
+                        ?.items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between text-sm border-b border-gray-600 py-1">
+                            <span>{item.product?.name} x{item.quantidade}</span>
+                            <span>
+                              R$ {(item.product?.price * item.quantidade).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
                       <div className="mt-2 font-bold flex justify-between">
                         <span>Total:</span>
                         <span>
                           R$
                           {comandas
                             .find((c) => c.id === selectedComanda)
-                            ?.items.reduce((acc, item) => acc + item.price * item.qty, 0)
+                            ?.items.reduce(
+                              (acc, item) =>
+                                acc +
+                                (item.product?.price || 0) * item.quantidade,
+                              0
+                            )
                             .toFixed(2)}
                         </span>
                       </div>
