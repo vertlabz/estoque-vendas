@@ -18,6 +18,10 @@ export default function Dashboard() {
   const [modalType, setModalType] = useState('');
   const [clientName, setClientName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [pendingCallback, setPendingCallback] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -72,25 +76,41 @@ export default function Dashboard() {
 
   const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  const finalizeSale = async () => {
-    if (cart.length === 0) return;
+  const openPaymentModal = (items, callback, msg) => {
+    setPendingItems(items);
+    setPendingCallback(() => callback);
+    setSuccessMessage(msg);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSelection = async (method) => {
     try {
       const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart }),
+        body: JSON.stringify({ items: pendingItems, metodoPagamento: method }),
       });
       if (!res.ok) {
         const data = await res.json();
         alert(`Erro: ${data.message}`);
         return;
       }
-      alert('Venda salva com sucesso!');
-      setCart([]);
+      if (pendingCallback) pendingCallback();
+      alert(successMessage || 'Venda salva com sucesso!');
     } catch (err) {
       alert('Erro ao salvar venda');
       console.error(err);
+    } finally {
+      setShowPaymentModal(false);
+      setPendingItems([]);
+      setPendingCallback(null);
+      setSuccessMessage('');
     }
+  };
+
+  const finalizeSale = () => {
+    if (cart.length === 0) return;
+    openPaymentModal(cart, () => setCart([]), 'Venda salva com sucesso!');
   };
 
   const handleCreateComanda = () => {
@@ -121,30 +141,20 @@ export default function Dashboard() {
     setModalType('finalize');
   };
 
-  const finalizeSelectedComanda = async () => {
+  const finalizeSelectedComanda = () => {
     if (!selectedComanda) return;
     const comanda = comandas.find((c) => c.id === selectedComanda);
     if (!comanda || comanda.items.length === 0) return;
 
-    try {
-      const res = await fetch('/api/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: comanda.items }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(`Erro: ${data.message}`);
-        return;
-      }
-      alert('Comanda finalizada com sucesso!');
-      setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
-      setSelectedComanda(null);
-      setShowModal(false);
-    } catch (err) {
-      alert('Erro ao finalizar comanda');
-      console.error(err);
-    }
+    openPaymentModal(
+      comanda.items,
+      () => {
+        setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
+        setSelectedComanda(null);
+        setShowModal(false);
+      },
+      'Comanda finalizada com sucesso!'
+    );
   };
 
 
@@ -337,6 +347,35 @@ export default function Dashboard() {
               )}
 
               <button onClick={() => setShowModal(false)} className="mt-4 w-full bg-red-600 py-2 rounded hover:bg-red-700">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">Método de Pagamento</h2>
+              <div className="space-y-2 mb-4">
+                {['Pix', 'Cartão de crédito', 'Cartão de débito', 'Dinheiro', 'Outro'].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => handlePaymentSelection(m)}
+                    className="w-full bg-gray-700 py-2 rounded mb-2 hover:bg-gray-600"
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPendingItems([]);
+                  setPendingCallback(null);
+                  setSuccessMessage('');
+                }}
+                className="w-full bg-red-600 py-2 rounded hover:bg-red-700"
+              >
                 Cancelar
               </button>
             </div>

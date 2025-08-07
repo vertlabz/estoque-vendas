@@ -37,9 +37,14 @@ export default function SalesPage() {
               <div key={sale.id} className="bg-gray-800 rounded-lg p-4">
                 <div className="flex justify-between mb-3">
                   <h2 className="text-xl font-bold">Venda #{sale.id}</h2>
-                  <span className="text-green-400 font-semibold">
-                    Total: R$ {sale.total.toFixed(2)}
-                  </span>
+                  <div className="text-right">
+                    <p className="text-green-400 font-semibold">
+                      Total: R$ {sale.total.toFixed(2)}
+                    </p>
+                    <p className="text-gray-300 text-sm">
+                      Método: {sale.metodoPagamento}
+                    </p>
+                  </div>
                 </div>
                 <p className="text-gray-400 text-sm mb-3">
                   {new Date(sale.createdAt).toLocaleString('pt-BR')}

@@ -21,18 +21,30 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { items } = req.body;
+    const { items, metodoPagamento } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: 'Itens da venda são obrigatórios' });
+      return res
+        .status(400)
+        .json({ message: 'Itens da venda são obrigatórios' });
+    }
+
+    if (!metodoPagamento || typeof metodoPagamento !== 'string') {
+      return res
+        .status(400)
+        .json({ message: 'Método de pagamento é obrigatório' });
     }
 
     try {
-      const total = items.reduce((acc, item) => acc + item.price * item.qty, 0);
+      const total = items.reduce(
+        (acc, item) => acc + item.price * item.qty,
+        0
+      );
 
       const sale = await prisma.sale.create({
         data: {
           total,
+          metodoPagamento: String(metodoPagamento),
           items: {
             create: items.map((item) => ({
               productId: item.id,

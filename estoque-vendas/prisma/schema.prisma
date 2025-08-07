@@ -66,6 +66,7 @@ model Sale {
   clientId    Int?
   total       Float?
   payment     String?    @default("dinheiro")
+  metodoPagamento String
   discount    Float?     @default(0)
   createdAt   DateTime   @default(now())
   items       SaleItem[]
