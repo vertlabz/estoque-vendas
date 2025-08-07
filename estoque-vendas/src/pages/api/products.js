@@ -28,6 +28,7 @@ export default async function handler(req, res) {
           categoryId,
           supplier,
           stock,
+          minStock,
           multiplier,
           description,
         } = req.body;
@@ -45,6 +46,7 @@ export default async function handler(req, res) {
             price: parseFloat(price),
             costPrice: costPrice !== undefined ? parseFloat(costPrice) : 0,
             stock: stock !== undefined ? parseInt(stock) : 0,
+            minStock: minStock !== undefined ? parseInt(minStock) : 0,
             multiplier: multiplier !== undefined ? parseInt(multiplier) : 1,
             category: {
               connect: {
@@ -70,6 +72,7 @@ export default async function handler(req, res) {
           costPrice,
           categoryId,
           stock,
+          minStock,
           multiplier,
           description,
         } = req.body;
@@ -88,6 +91,7 @@ export default async function handler(req, res) {
             price: parseFloat(price),
             costPrice: costPrice !== undefined ? parseFloat(costPrice) : 0,
             stock: stock !== undefined ? parseInt(stock) : 0,
+            minStock: minStock !== undefined ? parseInt(minStock) : 0,
             multiplier: multiplier !== undefined ? parseInt(multiplier) : 1,
             category: {
               connect: {

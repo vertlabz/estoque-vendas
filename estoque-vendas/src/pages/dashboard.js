@@ -7,6 +7,7 @@ import {
 } from 'react-icons/md';
 import { useRouter } from 'next/router';
 import Layout from './layout';
+import { saveSaleOffline, syncPendingSales } from '@/lib/offlineSales';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -30,6 +31,20 @@ export default function Dashboard() {
       setProducts(Array.isArray(data) ? data : []);
     }
     loadProducts();
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      syncPendingSales();
+    };
+    window.addEventListener('online', handleOnline);
+    // tenta sincronizar ao carregar
+    syncPendingSales();
+    const interval = setInterval(syncPendingSales, 5 * 60 * 1000);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      clearInterval(interval);
+    };
   }, []);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -88,22 +103,31 @@ export default function Dashboard() {
 
   const finalizeSale = async () => {
     if (cart.length === 0) return;
-    try {
-      const res = await fetch('/api/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(`Erro: ${data.message}`);
-        return;
+    const offlineId = crypto.randomUUID();
+    const saleData = { offlineId, items: cart };
+    if (navigator.onLine) {
+      try {
+        const res = await fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(saleData),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert(`Erro: ${data.message}`);
+          return;
+        }
+        alert('Venda salva com sucesso!');
+        setCart([]);
+        await syncPendingSales();
+      } catch (err) {
+        alert('Erro ao salvar venda');
+        console.error(err);
       }
-      alert('Venda salva com sucesso!');
+    } else {
+      await saveSaleOffline(saleData);
+      alert('Sem conexão. Venda salva localmente!');
       setCart([]);
-    } catch (err) {
-      alert('Erro ao salvar venda');
-      console.error(err);
     }
   };
 
@@ -149,22 +173,45 @@ export default function Dashboard() {
 
   const finalizeSelectedComanda = async () => {
     if (!selectedComanda) return;
-    try {
-      const res = await fetch(`/api/comandas/${selectedComanda}/finalize`, {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(`Erro: ${data.message}`);
-        return;
+const comanda = comandas.find((c) => c.id === selectedComanda);
+if (!comanda || comanda.items.length === 0) return;
+
+const offlineId = crypto.randomUUID();
+const saleData = { offlineId, items: comanda.items };
+
+if (navigator.onLine) {
+  try {
+    const res = await fetch(`/api/comandas/${selectedComanda}/finalize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(saleData),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(`Erro: ${data.message}`);
+      return;
+    }
+    alert('Comanda finalizada com sucesso!');
+    setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
+    setSelectedComanda(null);
+    setShowModal(false);
+    await syncPendingSales();
+  } catch (err) {
+    alert('Erro ao finalizar comanda');
+    console.error(err);
+  }
+} else {
+  saveSaleOffline(saleData);
+  alert('Comanda salva offline e será sincronizada quando voltar a internet.');
+}
+
       }
-      alert('Comanda finalizada com sucesso!');
+    } else {
+      await saveSaleOffline(saleData);
+      alert('Sem conexão. Comanda salva localmente!');
       setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
       setSelectedComanda(null);
       setShowModal(false);
-    } catch (err) {
-      alert('Erro ao finalizar comanda');
-      console.error(err);
     }
   };
 
