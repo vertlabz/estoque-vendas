@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Layout from './layout';
+import DashboardLayout from '@/layouts/DashboardLayout';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -137,7 +137,7 @@ export default function ProductsPage() {
   );
 
   return (
-    <Layout>
+    <DashboardLayout>
       <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
           <h1 className="text-2xl sm:text-3xl font-semibold">Gerenciar Produtos</h1>
@@ -298,6 +298,6 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </DashboardLayout>
   );
 }

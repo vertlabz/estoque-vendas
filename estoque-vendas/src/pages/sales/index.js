@@ -1,11 +1,6 @@
 import { useState, useEffect } from 'react';
-import {
-  MdDashboard,
-  MdInventory,
-  MdAttachMoney,
-  MdLogout,
-} from 'react-icons/md';
-import Layout from './layout';
+import DashboardLayout from '@/layouts/DashboardLayout';
+import { getSales } from '@/services/api';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -13,8 +8,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     async function loadSales() {
-      const res = await fetch('/api/sales');
-      const data = await res.json();
+      const data = await getSales();
       setSales(data);
       setLoading(false);
     }
@@ -25,7 +19,7 @@ export default function SalesPage() {
     return <div className="p-6 text-white">Carregando vendas...</div>;
 
   return (
-    <Layout>
+    <DashboardLayout>
       <div className="min-h-screen bg-gray-900 text-white p-6">
         <h1 className="text-3xl mb-6">Histórico de Vendas</h1>
 
@@ -84,6 +78,6 @@ export default function SalesPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </DashboardLayout>
   );
 }
