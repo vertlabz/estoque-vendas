@@ -6,15 +6,21 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [sortOption, setSortOption] = useState('name');
   const [form, setForm] = useState({
     name: '',
     price: '',
     costPrice: '',
     categoryId: '',
     stock: '',
+    minStock: '',
     multiplier: 1,
   });
   const [modalOpen, setModalOpen] = useState(false);
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [stockForm, setStockForm] = useState({ productId: '', quantity: '' });
 
   useEffect(() => {
     fetchProducts();
@@ -49,6 +55,7 @@ export default function ProductsPage() {
       costPrice: '',
       categoryId: '',
       stock: '',
+      minStock: '',
       multiplier: 1,
     });
     setModalOpen(true);
@@ -62,6 +69,7 @@ export default function ProductsPage() {
       costPrice: product.costPrice || '',
       categoryId: product.category?.id || '',
       stock: product.stock || '',
+      minStock: product.minStock || '',
       multiplier: product.multiplier || 1,
     });
     setModalOpen(true);
@@ -93,6 +101,7 @@ export default function ProductsPage() {
       costPrice: parseFloat(form.costPrice),
       categoryId: parseInt(form.categoryId),
       stock: estoqueFinal,
+      minStock: parseInt(form.minStock || 0),
       multiplier: parseInt(form.multiplier),
     };
 
@@ -132,9 +141,74 @@ export default function ProductsPage() {
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleStockFormChange = (e) => {
+    const { name, value } = e.target;
+    setStockForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const closeStockModal = () => setStockModalOpen(false);
+
+  const handleStockSubmit = async (e) => {
+    e.preventDefault();
+    const product = products.find(
+      (p) => p.id === parseInt(stockForm.productId)
+    );
+    if (!product) return;
+    const newStock =
+      parseInt(product.stock || 0) + parseInt(stockForm.quantity || 0);
+
+    const body = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      costPrice: product.costPrice,
+      categoryId: product.category?.id || product.categoryId,
+      stock: newStock,
+      minStock: product.minStock || 0,
+      multiplier: product.multiplier,
+      description: product.description,
+    };
+
+    const res = await fetch('/api/products', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      alert('Estoque atualizado com sucesso!');
+      closeStockModal();
+      fetchProducts();
+    } else {
+      const data = await res.json();
+      alert(data.message || 'Erro ao atualizar estoque');
+    }
+  };
+
+  const filteredProducts = products.filter((product) => {
+    const matchesName = product.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory
+      ? product.category?.id === selectedCategory
+      : true;
+    const matchesLowStock = showLowStockOnly
+      ? product.stock < (product.minStock || 0)
+      : true;
+    return matchesName && matchesCategory && matchesLowStock;
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (sortOption) {
+      case 'stock':
+        return b.stock - a.stock;
+      case 'updatedAt':
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      case 'name':
+      default:
+        return a.name.localeCompare(b.name);
+    }
+  });
 
   return (
     <Layout>
@@ -149,6 +223,21 @@ export default function ProductsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-4 py-2 rounded bg-gray-800 border border-gray-600 text-white w-full sm:w-auto"
             />
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-4 py-2 rounded bg-gray-800 border border-gray-600 text-white"
+            >
+              <option value="stock">Ordenar por Estoque</option>
+              <option value="updatedAt">Última Modificação</option>
+              <option value="name">Ordem Alfabética</option>
+            </select>
+            <button
+              onClick={() => setStockModalOpen(true)}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
+            >
+              Adicionar Estoque
+            </button>
             <button
               onClick={openModalForNew}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
@@ -156,6 +245,30 @@ export default function ProductsPage() {
               Adicionar Produto
             </button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`px-4 py-2 rounded ${selectedCategory === null ? 'bg-blue-600' : 'bg-gray-700'} hover:bg-blue-700`}
+          >
+            Todos
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-4 py-2 rounded ${selectedCategory === cat.id ? 'bg-blue-600' : 'bg-gray-700'} hover:bg-blue-700`}
+            >
+              {cat.name}
+            </button>
+          ))}
+          <button
+            onClick={() => setShowLowStockOnly((prev) => !prev)}
+            className={`px-4 py-2 rounded ${showLowStockOnly ? 'bg-red-600' : 'bg-gray-700'} hover:bg-red-700`}
+          >
+            Abaixo do mínimo
+          </button>
         </div>
 
         {/* Tabela */}
@@ -173,15 +286,22 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.length === 0 ? (
+              {sortedProducts.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center p-4 text-gray-400">
                     Nenhum produto encontrado.
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-700">
+                sortedProducts.map((product) => (
+                  <tr
+                    key={product.id}
+                    className={`hover:bg-gray-700 ${
+                      product.stock < (product.minStock || 0)
+                        ? 'bg-red-900'
+                        : ''
+                    }`}
+                  >
                     <td className="border border-gray-600 px-4 py-2">{product.name}</td>
                     <td className="border border-gray-600 px-4 py-2">{product.category?.name || 'Sem categoria'}</td>
                     <td className="border border-gray-600 px-4 py-2 text-right">R$ {product.price?.toFixed(2)}</td>
@@ -271,6 +391,14 @@ export default function ProductsPage() {
                   className="w-full p-3 rounded bg-gray-800 border border-gray-600"
                 />
                 <input
+                  name="minStock"
+                  type="number"
+                  value={form.minStock}
+                  onChange={handleInputChange}
+                  placeholder="Estoque mínimo"
+                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
+                />
+                <input
                   name="multiplier"
                   type="number"
                   value={form.multiplier}
@@ -291,6 +419,61 @@ export default function ProductsPage() {
                     className="px-6 py-2 bg-green-600 rounded hover:bg-green-700"
                   >
                     {editingProduct ? 'Atualizar Produto' : 'Adicionar Produto'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {stockModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="bg-gray-900 p-6 rounded shadow-lg w-full max-w-md relative">
+              <button
+                onClick={closeStockModal}
+                className="absolute top-2 right-2 text-white text-xl font-bold hover:text-red-500"
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+              <h2 className="text-2xl mb-4">Adicionar Estoque</h2>
+              <form onSubmit={handleStockSubmit} className="space-y-4">
+                <select
+                  name="productId"
+                  value={stockForm.productId}
+                  onChange={handleStockFormChange}
+                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
+                  required
+                >
+                  <option value="">Selecione um produto</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  name="quantity"
+                  type="number"
+                  value={stockForm.quantity}
+                  onChange={handleStockFormChange}
+                  placeholder="Quantidade a adicionar"
+                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
+                  required
+                />
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={closeStockModal}
+                    className="px-6 py-2 bg-red-600 rounded hover:bg-red-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-yellow-600 rounded hover:bg-yellow-700"
+                  >
+                    Atualizar Estoque
                   </button>
                 </div>
               </form>
