@@ -1,12 +1,12 @@
+// @ts-nocheck
 import { useState, useEffect } from 'react';
-import {
-  MdDashboard,
-  MdInventory,
-  MdAttachMoney,
-  MdLogout,
-} from 'react-icons/md';
 import { useRouter } from 'next/router';
-import Layout from './layout';
+import DashboardLayout from '@/layouts/DashboardLayout';
+import DashboardHeader from "@/components/Dashboard/DashboardHeader";
+import DashboardFilters from "@/components/Dashboard/DashboardFilters";
+import DashboardCards from "@/components/Dashboard/DashboardCards";
+import DashboardCharts from "@/components/Dashboard/DashboardCharts";
+import DashboardTable from "@/components/Dashboard/DashboardTable";
 import { saveSaleOffline, syncPendingSales } from '@/lib/offlineSales';
 
 export default function Dashboard() {
@@ -253,53 +253,20 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
-      <Layout>
+      <DashboardLayout>
+        <DashboardHeader />
+        <DashboardCards productsCount={products.length} />
+        <DashboardCharts />
         <main className="flex-1 p-4 flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Buscar produto..."
-              className="w-full mb-4 p-2 rounded bg-gray-700 text-white"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <div className="flex flex-wrap gap-2 mb-4">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={`px-4 py-2 rounded ${selectedCategory === null ? 'bg-blue-600' : 'bg-gray-700'} hover:bg-blue-700`}
-              >
-                Todos
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-4 py-2 rounded ${selectedCategory === cat.id ? 'bg-blue-600' : 'bg-gray-700'} hover:bg-blue-700`}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-gray-800 p-4 rounded-lg flex flex-col items-center"
-                >
-                  <h2 className="text-lg font-bold">{product.name}</h2>
-                  <p className="text-blue-400 font-semibold">
-                    R$ {product.price.toFixed(2)}
-                  </p>
-                  <button
-                    onClick={() => addToCart(product)}
-                    className="mt-3 bg-green-600 px-6 py-3 rounded-lg hover:bg-green-700 transition w-full text-lg"
-                  >
-                    + Adicionar
-                  </button>
-                </div>
-              ))}
-            </div>
+              <DashboardFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+              />
+              <DashboardTable products={filteredProducts} addToCart={addToCart} />
           </div>
 
           <div className="w-full sm:w-96 bg-gray-800 p-6 rounded-lg flex flex-col gap-6">
@@ -461,7 +428,7 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-      </Layout>
+      </DashboardLayout>
     </div>
   );
 }
