@@ -64,6 +64,7 @@ model Sale {
   userId      Int?
   client      Client?    @relation(fields: [clientId], references: [id])
   clientId    Int?
+  offlineId   String?    @unique
   total       Float?
   payment     String?    @default("dinheiro")
   discount    Float?     @default(0)
