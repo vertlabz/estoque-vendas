@@ -29,7 +29,7 @@ model Product {
   price        Float?
   costPrice    Float?
   stock        Int        @default(0)
-  estoqueMinimo Int @default(0)
+  minStock Int @default(0)
 
   multiplier   Int        @default(1)
   parentId     Int?

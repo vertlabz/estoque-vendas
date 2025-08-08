@@ -46,7 +46,7 @@ export default async function handler(req, res) {
             price: parseFloat(price),
             costPrice: costPrice !== undefined ? parseFloat(costPrice) : 0,
             stock: stock !== undefined ? parseInt(stock) : 0,
-            minStock: minStock !== undefined ? parseInt(minStock) : 0,
+            minStock: minStock !== undefined ? parseInt(minStock) : 0, // correção
             multiplier: multiplier !== undefined ? parseInt(multiplier) : 1,
             category: {
               connect: {
