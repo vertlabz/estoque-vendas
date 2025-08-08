@@ -3,7 +3,20 @@ import { prisma } from '@/lib/prisma';
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
+      const { startDate, endDate, paymentMethod } = req.query;
+
+      const where = {};
+      if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) where.createdAt.gte = new Date(startDate);
+        if (endDate) where.createdAt.lte = new Date(endDate);
+      }
+      if (paymentMethod) {
+        where.metodoPagamento = String(paymentMethod);
+      }
+
       const sales = await prisma.sale.findMany({
+        where,
         include: {
           items: {
             include: {
@@ -13,7 +26,9 @@ export default async function handler(req, res) {
         },
         orderBy: { createdAt: 'desc' },
       });
-      return res.status(200).json(sales);
+
+      const total = sales.reduce((acc, sale) => acc + sale.total, 0);
+      return res.status(200).json({ sales, total });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Erro ao buscar vendas' });
