@@ -6,6 +6,7 @@ import {
   MdLogout,
   MdReceiptLong,
 } from "react-icons/md";
+import { FiBarChart2 } from "react-icons/fi";
 
 export default function Layout({ children }) {
   const router = useRouter();
@@ -32,6 +33,9 @@ export default function Layout({ children }) {
           <button onClick={() => goTo("/sales")} title="Vendas" className="text-white text-3xl hover:text-green-400 transition">
             <MdAttachMoney />
           </button>
+          <button onClick={() => goTo("/dashboard-vendas")} title="Dashboard Vendas" className="text-white text-3xl hover:text-green-400 transition">
+            <FiBarChart2 />
+          </button>
           <button onClick={logout} title="Logout" className="mt-auto text-red-500 text-3xl hover:text-red-700 transition">
             <MdLogout />
           </button>
@@ -55,6 +59,9 @@ export default function Layout({ children }) {
         <button onClick={() => goTo("/sales")} title="Vendas" className="text-white text-3xl hover:text-green-400 transition">
           <MdAttachMoney />
         </button>
+        <button onClick={() => goTo("/dashboard-vendas")} title="Dashboard Vendas" className="text-white text-3xl hover:text-green-400 transition">
+          <FiBarChart2 />
+        </button>
         <button onClick={logout} title="Logout" className="text-red-500 text-3xl hover:text-red-700 transition">
           <MdLogout />
         </button>
@@ -62,3 +69,4 @@ export default function Layout({ children }) {
     </div>
   );
 }
+
