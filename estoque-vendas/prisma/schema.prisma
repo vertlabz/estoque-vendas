@@ -93,6 +93,7 @@ model Comanda {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   status    String        @default("aberta")
+  clientName String?
   itens     ComandaItem[]
 }
 
