@@ -112,19 +112,32 @@ export default function Dashboard() {
   };
 
   const handlePaymentSelection = async (method) => {
+    if (!method) {
+      alert('Por favor, selecione um método de pagamento');
+      return;
+    }
     try {
-      const res = await fetch('/api/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: pendingItems, metodoPagamento: method }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(`Erro: ${data.message}`);
-        return;
+      const offlineId = crypto.randomUUID();
+      const saleData = { offlineId, items: pendingItems, metodoPagamento: method };
+      if (navigator.onLine) {
+        const res = await fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(saleData),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert(`Erro: ${data.message}`);
+          return;
+        }
+        if (pendingCallback) pendingCallback();
+        alert(successMessage || 'Venda salva com sucesso!');
+        await syncPendingSales();
+      } else {
+        await saveSaleOffline(saleData);
+        if (pendingCallback) pendingCallback();
+        alert('Sem conexão. Venda salva localmente!');
       }
-      if (pendingCallback) pendingCallback();
-      alert(successMessage || 'Venda salva com sucesso!');
     } catch (err) {
       alert('Erro ao salvar venda');
       console.error(err);
@@ -136,42 +149,23 @@ export default function Dashboard() {
     }
   };
 
-  const finalizeSale = async () => {
+  const finalizeSale = () => {
     if (cart.length === 0) return;
-    const offlineId = crypto.randomUUID();
-    const saleData = { offlineId, items: cart };
-    if (navigator.onLine) {
-      try {
-        const res = await fetch('/api/sales', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(saleData),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          alert(`Erro: ${data.message}`);
-          return;
-        }
-        alert('Venda salva com sucesso!');
-        setCart([]);
-        await syncPendingSales();
-      } catch (err) {
-        alert('Erro ao salvar venda');
-        console.error(err);
-      }
-    } else {
-      await saveSaleOffline(saleData);
-      alert('Sem conexão. Venda salva localmente!');
-      setCart([]);
-    }
+    openPaymentModal(cart, () => setCart([]), 'Venda salva com sucesso!');
   };
 
   const handleCreateComanda = async () => {
+    const clientName = prompt('Informe o nome do cliente:');
+    if (!clientName) return alert('Nome do cliente é obrigatório!');
     try {
-      const res = await fetch('/api/comandas', { method: 'POST' });
+      const res = await fetch('/api/comandas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientName }),
+      });
       if (!res.ok) throw new Error('Erro ao criar comanda');
       const nova = await res.json();
-      setComandas((prev) => [...prev, { ...nova, items: [] }]);
+      setComandas((prev) => [...prev, { ...nova, clientName, items: [] }]);
     } catch (err) {
       alert('Erro ao criar comanda');
       console.error(err);
