@@ -51,13 +51,17 @@ export default function SalesPage() {
   const currentSales = sales.slice(startIndex, startIndex + perPage);
 
   function exportCSV() {
-    const headers = ['ID', 'Data', 'Total', 'Método'];
-    const rows = sales.map((s) => [
-      s.id,
-      new Date(s.createdAt).toLocaleString('pt-BR'),
-      s.total.toFixed(2),
-      s.metodoPagamento,
-    ]);
+    const headers = ['ID', 'Produto', 'Quantidade', 'Total', 'Método', 'Data'];
+    const rows = sales.flatMap((s) =>
+      s.items.map((item) => [
+        s.id,
+        item.product?.name || '',
+        item.quantity,
+        s.total.toFixed(2),
+        s.metodoPagamento,
+        new Date(s.createdAt).toLocaleString('pt-BR'),
+      ])
+    );
     const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -75,15 +79,24 @@ export default function SalesPage() {
     doc.text('Histórico de Vendas', 10, 10);
     let y = 20;
     sales.forEach((s) => {
-      doc.text(String(s.id), 10, y);
-      doc.text(new Date(s.createdAt).toLocaleString('pt-BR'), 30, y);
-      doc.text(`R$ ${s.total.toFixed(2)}`, 120, y);
-      doc.text(s.metodoPagamento, 160, y);
-      y += 10;
-      if (y > 280) {
-        doc.addPage();
-        y = 20;
-      }
+      s.items.forEach((item, idx) => {
+        doc.text(String(s.id), 10, y);
+        doc.text(item.product?.name || '', 25, y);
+        doc.text(String(item.quantity), 90, y);
+        doc.text(`R$ ${s.total.toFixed(2)}`, 110, y);
+        doc.text(s.metodoPagamento, 150, y);
+        doc.text(
+          new Date(s.createdAt).toLocaleString('pt-BR'),
+          190,
+          y
+        );
+        y += 10;
+        if (y > 280) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+      y += 5;
     });
     doc.save('sales.pdf');
   }
@@ -172,32 +185,95 @@ export default function SalesPage() {
         {sales.length === 0 ? (
           <p className="text-gray-400">Nenhuma venda encontrada.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-gray-700">
-                  <th className="px-3 py-2 text-left">Venda</th>
-                  <th className="px-3 py-2 text-left">Data</th>
-                  <th className="px-3 py-2 text-left">Total</th>
-                  <th className="px-3 py-2 text-left">Método</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentSales.map((sale) => (
-                  <tr key={sale.id} className="border-b border-gray-700">
-                    <td className="px-3 py-2">#{sale.id}</td>
-                    <td className="px-3 py-2">
-                      {new Date(sale.createdAt).toLocaleString('pt-BR')}
-                    </td>
-                    <td className="px-3 py-2">
-                      R$ {sale.total.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2">{sale.metodoPagamento}</td>
+          <>
+            <div className="md:hidden space-y-4">
+              {currentSales.map((sale) => (
+                <div key={sale.id} className="bg-gray-800 p-4 rounded">
+                  <div className="font-bold mb-2">Venda #{sale.id}</div>
+                  <div className="text-sm mb-1">
+                    Data: {new Date(sale.createdAt).toLocaleString('pt-BR')}
+                  </div>
+                  <div className="text-sm mb-1">
+                    Método: {sale.metodoPagamento}
+                  </div>
+                  <div className="text-sm mb-1">
+                    Total: R$ {sale.total.toFixed(2)}
+                  </div>
+                  <div className="mt-2 text-sm space-y-1">
+                    {sale.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex justify-between border-b border-gray-700 pb-1"
+                      >
+                        <span>{item.product?.name}</span>
+                        <span>x{item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-700">
+                    <th className="px-3 py-2 text-left">Venda</th>
+                    <th className="px-3 py-2 text-left">Produto</th>
+                    <th className="px-3 py-2 text-left">Quantidade</th>
+                    <th className="px-3 py-2 text-left">Total</th>
+                    <th className="px-3 py-2 text-left">Método</th>
+                    <th className="px-3 py-2 text-left">Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {currentSales.map((sale) =>
+                    sale.items.map((item, idx) => (
+                      <tr
+                        key={`${sale.id}-${idx}`}
+                        className="border-b border-gray-700 align-top"
+                      >
+                        {idx === 0 && (
+                          <td
+                            rowSpan={sale.items.length}
+                            className="px-3 py-2 font-semibold"
+                          >
+                            #{sale.id}
+                          </td>
+                        )}
+                        <td className="px-3 py-2">{item.product?.name}</td>
+                        <td className="px-3 py-2">{item.quantity}</td>
+                        {idx === 0 && (
+                          <td
+                            rowSpan={sale.items.length}
+                            className="px-3 py-2"
+                          >
+                            R$ {sale.total.toFixed(2)}
+                          </td>
+                        )}
+                        {idx === 0 && (
+                          <td
+                            rowSpan={sale.items.length}
+                            className="px-3 py-2"
+                          >
+                            {sale.metodoPagamento}
+                          </td>
+                        )}
+                        {idx === 0 && (
+                          <td
+                            rowSpan={sale.items.length}
+                            className="px-3 py-2"
+                          >
+                            {new Date(sale.createdAt).toLocaleString('pt-BR')}
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {sales.length > perPage && (

@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingItems, setPendingItems] = useState([]);
   const [pendingCallback, setPendingCallback] = useState(null);
+  const [pendingEndpoint, setPendingEndpoint] = useState('/api/sales');
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
@@ -104,8 +105,9 @@ export default function Dashboard() {
 
   const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  const openPaymentModal = (items, callback, msg) => {
+  const openPaymentModal = (items, endpoint, callback, msg) => {
     setPendingItems(items);
+    setPendingEndpoint(endpoint);
     setPendingCallback(() => callback);
     setSuccessMessage(msg);
     setShowPaymentModal(true);
@@ -118,9 +120,13 @@ export default function Dashboard() {
     }
     try {
       const offlineId = crypto.randomUUID();
-      const saleData = { offlineId, items: pendingItems, metodoPagamento: method };
+      const saleData = {
+        offlineId,
+        items: pendingItems,
+        metodoPagamento: method,
+      };
       if (navigator.onLine) {
-        const res = await fetch('/api/sales', {
+        const res = await fetch(pendingEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(saleData),
@@ -132,11 +138,16 @@ export default function Dashboard() {
         }
         if (pendingCallback) pendingCallback();
         alert(successMessage || 'Venda salva com sucesso!');
-        await syncPendingSales();
+        if (pendingEndpoint === '/api/sales') await syncPendingSales();
       } else {
-        await saveSaleOffline(saleData);
-        if (pendingCallback) pendingCallback();
-        alert('Sem conexão. Venda salva localmente!');
+        if (pendingEndpoint === '/api/sales') {
+          await saveSaleOffline(saleData);
+          if (pendingCallback) pendingCallback();
+          alert('Sem conexão. Venda salva localmente!');
+        } else {
+          alert('Sem conexão. Não foi possível finalizar a comanda.');
+          return;
+        }
       }
     } catch (err) {
       alert('Erro ao salvar venda');
@@ -145,13 +156,19 @@ export default function Dashboard() {
       setShowPaymentModal(false);
       setPendingItems([]);
       setPendingCallback(null);
+      setPendingEndpoint('/api/sales');
       setSuccessMessage('');
     }
   };
 
   const finalizeSale = () => {
     if (cart.length === 0) return;
-    openPaymentModal(cart, () => setCart([]), 'Venda salva com sucesso!');
+    openPaymentModal(
+      cart,
+      '/api/sales',
+      () => setCart([]),
+      'Venda salva com sucesso!'
+    );
   };
 
   const handleCreateComanda = async () => {
@@ -200,42 +217,21 @@ export default function Dashboard() {
     setModalType('finalize');
   };
 
-  const finalizeSelectedComanda = async () => {
+  const finalizeSelectedComanda = () => {
     if (!selectedComanda) return;
     const comanda = comandas.find((c) => c.id === selectedComanda);
     if (!comanda || comanda.items.length === 0) return;
 
-    const offlineId = crypto.randomUUID();
-    const saleData = { offlineId, items: comanda.items };
-
-    if (navigator.onLine) {
-      try {
-        const res = await fetch(`/api/comandas/${selectedComanda}/finalize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(saleData),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          alert(`Erro: ${data.message}`);
-          return;
-        }
-        alert('Comanda finalizada com sucesso!');
+    openPaymentModal(
+      comanda.items,
+      `/api/comandas/${selectedComanda}/finalize`,
+      () => {
         setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
         setSelectedComanda(null);
         setShowModal(false);
-        await syncPendingSales();
-      } catch (err) {
-        alert('Erro ao finalizar comanda');
-        console.error(err);
-      }
-    } else {
-      await saveSaleOffline(saleData);
-      alert('Comanda salva offline e será sincronizada quando voltar a internet.');
-      setComandas((prev) => prev.filter((c) => c.id !== selectedComanda));
-      setSelectedComanda(null);
-      setShowModal(false);
-    }
+      },
+      'Venda finalizada com sucesso!'
+    );
   };
 
   const filteredProducts = products.filter((p) => {
