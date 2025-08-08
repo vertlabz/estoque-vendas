@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from './layout';
+import { triggerVibration } from '@/lib/haptic';
 
 export default function Comandas() {
   const [comandas, setComandas] = useState([]);
@@ -18,6 +19,7 @@ export default function Comandas() {
   }, []);
 
   const handleCreateComanda = async () => {
+    triggerVibration();
     const clientName = prompt('Informe o nome do cliente:');
     if (!clientName) {
       return alert('Nome do cliente é obrigatório!');
@@ -40,6 +42,7 @@ export default function Comandas() {
   };
 
   const handleFinalizeComanda = async (comandaId) => {
+    triggerVibration();
     try {
       const res = await fetch(`/api/comandas/${comandaId}/finalize`, {
         method: 'POST',

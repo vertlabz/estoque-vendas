@@ -7,6 +7,7 @@ import {
 } from 'react-icons/md';
 import { useRouter } from 'next/router';
 import Layout from './layout';
+import { triggerVibration } from '@/lib/haptic';
 import { saveSaleOffline, syncPendingSales } from '@/lib/offlineSales';
 
 export default function Dashboard() {
@@ -172,6 +173,7 @@ export default function Dashboard() {
   };
 
   const handleCreateComanda = async () => {
+    triggerVibration();
     const clientName = prompt('Informe o nome do cliente:');
     if (!clientName) return alert('Nome do cliente é obrigatório!');
     try {
@@ -213,6 +215,7 @@ export default function Dashboard() {
   };
 
   const handleFinalizeComanda = () => {
+    triggerVibration();
     setShowModal(true);
     setModalType('finalize');
   };
@@ -328,13 +331,19 @@ export default function Dashboard() {
                 Finalizar Venda
               </button>
               <div className="mt-4 space-y-2">
-                <button onClick={handleCreateComanda} className="bg-yellow-600 w-full py-2 rounded hover:bg-yellow-700">
+                <button
+                  onClick={handleCreateComanda}
+                  className="criar-comanda-btn bg-yellow-600 w-full py-2 rounded hover:bg-yellow-700"
+                >
                   Criar Comanda
                 </button>
                 <button onClick={handleAddToComanda} className="bg-purple-600 w-full py-2 rounded hover:bg-purple-700">
                   Adicionar à Comanda
                 </button>
-                <button onClick={handleFinalizeComanda} className="bg-pink-600 w-full py-2 rounded hover:bg-pink-700">
+                <button
+                  onClick={handleFinalizeComanda}
+                  className="finalizar-comanda-btn bg-pink-600 w-full py-2 rounded hover:bg-pink-700"
+                >
                   Finalizar Comanda
                 </button>
               </div>

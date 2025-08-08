@@ -40,3 +40,7 @@ button:active {
 .finalizar-comanda-btn:active {
   background-color: #f44336;
 }
+
+.adicionar-produto-btn:active {
+  background-color: #45a049;
+}
