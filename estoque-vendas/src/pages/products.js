@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import Layout from './layout';
 import { triggerVibration } from '@/lib/haptic';
+import CreateCategoryModal from '@/components/forms/CreateCategoryModal';
+import useCategories from '@/hooks/useCategories';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const { categories, loadCategories, addCategory } = useCategories(); // hook manages categories
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -22,11 +24,12 @@ export default function ProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [stockForm, setStockForm] = useState({ productId: '', quantity: '' });
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false); // controls category modal
 
   useEffect(() => {
     fetchProducts();
-    fetchCategories();
-  }, []);
+    loadCategories();
+  }, []); // load initial data
 
   const fetchProducts = async () => {
     try {
@@ -38,15 +41,6 @@ export default function ProductsPage() {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch('/api/categories');
-      const data = await res.json();
-      setCategories(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Erro ao buscar categorias:', error);
-    }
-  };
 
   const openModalForNew = () => {
     triggerVibration();
@@ -79,6 +73,11 @@ export default function ProductsPage() {
 
   const closeModal = () => {
     setModalOpen(false);
+  };
+
+  const handleCategoryCreated = (category) => {
+    addCategory(category); // refresh list with new category
+    setForm((prev) => ({ ...prev, categoryId: category.id })); // select created category
   };
 
   const handleInputChange = (e) => {
@@ -234,18 +233,25 @@ export default function ProductsPage() {
               <option value="updatedAt">Última Modificação</option>
               <option value="name">Ordem Alfabética</option>
             </select>
-            <button
-              onClick={() => setStockModalOpen(true)}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
-            >
-              Adicionar Estoque
-            </button>
-            <button
-              onClick={openModalForNew}
-              className="adicionar-produto-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            >
-              Adicionar Produto
-            </button>
+              <button
+                onClick={() => setStockModalOpen(true)}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
+              >
+                Adicionar Estoque
+              </button>
+              <button
+                onClick={openModalForNew}
+                className="adicionar-produto-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              >
+                Adicionar Produto
+              </button>
+              {/* open modal to create a new category */}
+              <button
+                onClick={() => setCategoryModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              >
+                Criar Categoria
+              </button>
           </div>
         </div>
 
@@ -548,6 +554,12 @@ export default function ProductsPage() {
             </div>
           </div>
         )}
+        {/* modal to create categories */}
+        <CreateCategoryModal
+          isOpen={categoryModalOpen}
+          onClose={() => setCategoryModalOpen(false)}
+          onCreated={handleCategoryCreated}
+        />
       </div>
     </Layout>
   );
