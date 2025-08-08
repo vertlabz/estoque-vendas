@@ -17,7 +17,13 @@ export default async function handler(req, res) {
       }
     case 'POST':
       try {
-        const comanda = await prisma.comanda.create({ data: {} });
+        const { clientName } = req.body || {};
+        const comanda = await prisma.comanda.create({
+          data: {
+            clientName: clientName || null,
+            status: 'aberta',
+          },
+        });
         return res.status(201).json(comanda);
       } catch (err) {
         console.error(err);
