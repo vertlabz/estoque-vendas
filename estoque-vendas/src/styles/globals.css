@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+button {
+  transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.criar-comanda-btn:active {
+  background-color: #4caf50;
+}
+
+.finalizar-comanda-btn:active {
+  background-color: #f44336;
+}
