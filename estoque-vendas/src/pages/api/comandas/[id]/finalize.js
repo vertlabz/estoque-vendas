@@ -1,7 +1,11 @@
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
-  const { method, query: { id } } = req;
+  const {
+    method,
+    query: { id },
+    body: { metodoPagamento },
+  } = req;
   const comandaId = parseInt(id, 10);
 
   if (method !== 'POST') {
@@ -9,12 +13,24 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: `Método ${method} não permitido` });
   }
 
+  if (!metodoPagamento) {
+    return res
+      .status(400)
+      .json({ message: 'Método de pagamento é obrigatório' });
+  }
+
   try {
     const comanda = await prisma.comanda.findUnique({
       where: { id: comandaId },
-      include: { itens: true },
+      include: { itens: { include: { product: true } } },
     });
-    if (!comanda) return res.status(404).json({ message: 'Comanda não encontrada' });
+    if (!comanda)
+      return res.status(404).json({ message: 'Comanda não encontrada' });
+
+    const total = comanda.itens.reduce(
+      (acc, item) => acc + (item.product?.price || 0) * item.quantidade,
+      0
+    );
 
     await prisma.$transaction([
       ...comanda.itens.map((item) =>
@@ -23,6 +39,19 @@ export default async function handler(req, res) {
           data: { stock: { decrement: item.quantidade } },
         })
       ),
+      prisma.sale.create({
+        data: {
+          total,
+          metodoPagamento: String(metodoPagamento),
+          items: {
+            create: comanda.itens.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantidade,
+              price: item.product?.price || 0,
+            })),
+          },
+        },
+      }),
       prisma.comanda.update({
         where: { id: comandaId },
         data: { status: 'finalizada' },
