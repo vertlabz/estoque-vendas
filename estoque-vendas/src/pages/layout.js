@@ -1,5 +1,11 @@
 import { useRouter } from "next/router";
-import { MdDashboard, MdInventory, MdAttachMoney, MdLogout } from "react-icons/md";
+import {
+  MdDashboard,
+  MdInventory,
+  MdAttachMoney,
+  MdLogout,
+  MdReceiptLong,
+} from "react-icons/md";
 
 export default function Layout({ children }) {
   const router = useRouter();
@@ -20,6 +26,9 @@ export default function Layout({ children }) {
           <button onClick={() => goTo("/products")} title="Produtos" className="text-white text-3xl hover:text-green-400 transition">
             <MdInventory />
           </button>
+          <button onClick={() => goTo("/comandas")} title="Comandas" className="text-white text-3xl hover:text-green-400 transition">
+            <MdReceiptLong />
+          </button>
           <button onClick={() => goTo("/sales")} title="Vendas" className="text-white text-3xl hover:text-green-400 transition">
             <MdAttachMoney />
           </button>
@@ -39,6 +48,9 @@ export default function Layout({ children }) {
         </button>
         <button onClick={() => goTo("/products")} title="Produtos" className="text-white text-3xl hover:text-green-400 transition">
           <MdInventory />
+        </button>
+        <button onClick={() => goTo("/comandas")} title="Comandas" className="text-white text-3xl hover:text-green-400 transition">
+          <MdReceiptLong />
         </button>
         <button onClick={() => goTo("/sales")} title="Vendas" className="text-white text-3xl hover:text-green-400 transition">
           <MdAttachMoney />

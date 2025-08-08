@@ -4,19 +4,13 @@ export default async function handler(req, res) {
   const {
     method,
     query: { id },
-    body: { metodoPagamento },
+    body: { metodoPagamento = 'Desconhecido' } = {},
   } = req;
   const comandaId = parseInt(id, 10);
 
   if (method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ message: `Método ${method} não permitido` });
-  }
-
-  if (!metodoPagamento) {
-    return res
-      .status(400)
-      .json({ message: 'Método de pagamento é obrigatório' });
   }
 
   try {
