@@ -62,25 +62,53 @@ export default async function handler(req, res) {
         0
       );
 
-      const sale = await prisma.sale.create({
-        data: {
-          offlineId,
-          total,
-          metodoPagamento: String(metodoPagamento),
-          items: {
-            create: items.map((item) => ({
-              productId: item.id,
-              quantity: item.qty,
-              price: item.price,
-            })),
+      const sale = await prisma.$transaction(async (tx) => {
+        const productIds = items.map((item) => item.id);
+        const products = await tx.product.findMany({
+          where: { id: { in: productIds } },
+        });
+
+        for (const item of items) {
+          const product = products.find((p) => p.id === item.id);
+          if (!product || product.stock < item.qty) {
+            throw new Error(
+              `Estoque insuficiente para o produto ${
+                product?.name || item.id
+              }`
+            );
+          }
+        }
+
+        for (const item of items) {
+          await tx.product.update({
+            where: { id: item.id },
+            data: { stock: { decrement: item.qty } },
+          });
+        }
+
+        return tx.sale.create({
+          data: {
+            offlineId,
+            total,
+            metodoPagamento: String(metodoPagamento),
+            items: {
+              create: items.map((item) => ({
+                productId: item.id,
+                quantity: item.qty,
+                price: item.price,
+              })),
+            },
           },
-        },
-        include: { items: true },
+          include: { items: true },
+        });
       });
 
       return res.status(201).json(sale);
     } catch (error) {
       console.error(error);
+      if (error.message && error.message.startsWith('Estoque insuficiente')) {
+        return res.status(400).json({ message: error.message });
+      }
       return res.status(500).json({ message: 'Erro ao salvar venda' });
     }
   }
