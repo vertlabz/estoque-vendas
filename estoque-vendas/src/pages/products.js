@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from './layout';
+import { triggerVibration } from '@/lib/haptic';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -48,6 +49,7 @@ export default function ProductsPage() {
   };
 
   const openModalForNew = () => {
+    triggerVibration();
     setEditingProduct(null);
     setForm({
       name: '',
@@ -240,7 +242,7 @@ export default function ProductsPage() {
             </button>
             <button
               onClick={openModalForNew}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              className="adicionar-produto-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
             >
               Adicionar Produto
             </button>
