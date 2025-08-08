@@ -230,7 +230,7 @@ export default function Dashboard() {
         setSelectedComanda(null);
         setShowModal(false);
       },
-      'Venda finalizada com sucesso!'
+      `Comanda de ${comanda.clientName || 'Cliente'} finalizada com sucesso!`
     );
   };
 
@@ -354,7 +354,7 @@ export default function Dashboard() {
                       onClick={() => addItemsToComanda(c.id)}
                       className="w-full bg-gray-700 py-2 rounded mb-2 hover:bg-gray-600"
                     >
-                      {`Comanda #${c.id}`}
+                      {`Comanda #${c.id} - Cliente: ${c.clientName || 'N/A'} - Status: ${c.status}`}
                     </button>
                   ))}
                 </div>
@@ -369,14 +369,19 @@ export default function Dashboard() {
                         onClick={() => setSelectedComanda(c.id)}
                         className={`w-full py-2 rounded ${selectedComanda === c.id ? 'bg-green-700' : 'bg-gray-700 hover:bg-gray-600'}`}
                       >
-                        {`Comanda #${c.id}`}
+                        {`Comanda #${c.id} - Cliente: ${c.clientName || 'N/A'} - Status: ${c.status}`}
                       </button>
                     ))}
                   </div>
 
                   {selectedComanda && (
                     <div className="bg-gray-700 p-4 rounded mb-4 max-h-64 overflow-y-auto">
-                      <h3 className="text-lg font-bold mb-2">Itens da Comanda</h3>
+                      <h3 className="text-lg font-bold mb-2">
+                        {(() => {
+                          const c = comandas.find((c) => c.id === selectedComanda);
+                          return `Comanda #${c?.id} - Cliente: ${c?.clientName || 'N/A'}`;
+                        })()}
+                      </h3>
                       {comandas
                         .find((c) => c.id === selectedComanda)
                         ?.items.map((item, idx) => (

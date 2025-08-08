@@ -94,6 +94,7 @@ model Comanda {
   updatedAt DateTime      @updatedAt
   clientName String?
   status     String        @default("aberta")
+
   itens     ComandaItem[]
 }
 
