@@ -342,70 +342,136 @@ export default function ProductsPage() {
               </button>
               <h2 className="text-2xl mb-4">{editingProduct ? 'Editar Produto' : 'Adicionar Produto'}</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={handleInputChange}
-                  placeholder="Nome do produto"
-                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
-                  required
-                />
-                <input
-                  name="price"
-                  type="number"
-                  step="0.01"
-                  value={form.price}
-                  onChange={handleInputChange}
-                  placeholder="Preço (ex: 4.50)"
-                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
-                  required
-                />
-                <input
-                  name="costPrice"
-                  type="number"
-                  step="0.01"
-                  value={form.costPrice}
-                  onChange={handleInputChange}
-                  placeholder="Preço de custo (ex: 2.50)"
-                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
-                  required
-                />
-                <select
-                  name="categoryId"
-                  value={form.categoryId || ''}
-                  onChange={handleInputChange}
-                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
-                  required
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-                <input
-                  name="stock"
-                  type="number"
-                  value={form.stock}
-                  onChange={handleInputChange}
-                  placeholder="Quantidade inicial (caixas)"
-                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
-                />
-                <input
-                  name="minStock"
-                  type="number"
-                  value={form.minStock}
-                  onChange={handleInputChange}
-                  placeholder="Estoque mínimo"
-                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
-                />
-                <input
-                  name="multiplier"
-                  type="number"
-                  value={form.multiplier}
-                  onChange={handleInputChange}
-                  placeholder="Multiplicador (ex: 12 latas por caixa)"
-                  className="w-full p-3 rounded bg-gray-800 border border-gray-600"
-                />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label
+                    htmlFor="name"
+                    className="sm:w-40 text-sm font-medium text-gray-200"
+                  >
+                    Nome do produto
+                  </label>
+                  <input
+                    id="name"
+                    name="name"
+                    value={form.name}
+                    onChange={handleInputChange}
+                    className="flex-1 w-full p-3 rounded bg-gray-800 border border-gray-600"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label
+                    htmlFor="price"
+                    className="sm:w-40 text-sm font-medium text-gray-200"
+                  >
+                    Preço (ex: 4.50)
+                  </label>
+                  <input
+                    id="price"
+                    name="price"
+                    type="number"
+                    step="0.01"
+                    value={form.price}
+                    onChange={handleInputChange}
+                    className="flex-1 w-full p-3 rounded bg-gray-800 border border-gray-600"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label
+                    htmlFor="costPrice"
+                    className="sm:w-40 text-sm font-medium text-gray-200"
+                  >
+                    Preço de custo (ex: 2.50)
+                  </label>
+                  <input
+                    id="costPrice"
+                    name="costPrice"
+                    type="number"
+                    step="0.01"
+                    value={form.costPrice}
+                    onChange={handleInputChange}
+                    className="flex-1 w-full p-3 rounded bg-gray-800 border border-gray-600"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label
+                    htmlFor="categoryId"
+                    className="sm:w-40 text-sm font-medium text-gray-200"
+                  >
+                    Categoria
+                  </label>
+                  <select
+                    id="categoryId"
+                    name="categoryId"
+                    value={form.categoryId || ''}
+                    onChange={handleInputChange}
+                    className="flex-1 w-full p-3 rounded bg-gray-800 border border-gray-600"
+                    required
+                  >
+                    <option value="">Selecione uma categoria</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label
+                    htmlFor="stock"
+                    className="sm:w-40 text-sm font-medium text-gray-200"
+                  >
+                    Quantidade inicial (caixas)
+                  </label>
+                  <input
+                    id="stock"
+                    name="stock"
+                    type="number"
+                    value={form.stock}
+                    onChange={handleInputChange}
+                    className="flex-1 w-full p-3 rounded bg-gray-800 border border-gray-600"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label
+                    htmlFor="minStock"
+                    className="sm:w-40 text-sm font-medium text-gray-200"
+                  >
+                    Estoque mínimo
+                  </label>
+                  <input
+                    id="minStock"
+                    name="minStock"
+                    type="number"
+                    value={form.minStock}
+                    onChange={handleInputChange}
+                    className="flex-1 w-full p-3 rounded bg-gray-800 border border-gray-600"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label
+                    htmlFor="multiplier"
+                    className="sm:w-40 text-sm font-medium text-gray-200"
+                  >
+                    Multiplicador (ex: 12 latas por caixa)
+                  </label>
+                  <input
+                    id="multiplier"
+                    name="multiplier"
+                    type="number"
+                    value={form.multiplier}
+                    onChange={handleInputChange}
+                    className="flex-1 w-full p-3 rounded bg-gray-800 border border-gray-600"
+                  />
+                </div>
+
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"
