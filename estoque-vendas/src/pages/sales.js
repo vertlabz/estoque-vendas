@@ -1,25 +1,92 @@
 import { useState, useEffect } from 'react';
-import {
-  MdDashboard,
-  MdInventory,
-  MdAttachMoney,
-  MdLogout,
-} from 'react-icons/md';
 import Layout from './layout';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 10;
+
+  async function fetchSales() {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (paymentMethod) params.append('paymentMethod', paymentMethod);
+    const res = await fetch('/api/sales?' + params.toString());
+    const data = await res.json();
+    setSales(data.sales);
+    setTotal(data.total);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function loadSales() {
-      const res = await fetch('/api/sales');
-      const data = await res.json();
-      setSales(data);
-      setLoading(false);
-    }
-    loadSales();
+    fetchSales();
   }, []);
+
+  useEffect(() => {
+    fetchSales();
+    setCurrentPage(1);
+  }, [startDate, endDate, paymentMethod]);
+
+  function handleQuickFilter(days) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  }
+
+  function resetDates() {
+    setStartDate('');
+    setEndDate('');
+  }
+
+  const totalPages = Math.max(1, Math.ceil(sales.length / perPage));
+  const startIndex = (currentPage - 1) * perPage;
+  const currentSales = sales.slice(startIndex, startIndex + perPage);
+
+  function exportCSV() {
+    const headers = ['ID', 'Data', 'Total', 'Método'];
+    const rows = sales.map((s) => [
+      s.id,
+      new Date(s.createdAt).toLocaleString('pt-BR'),
+      s.total.toFixed(2),
+      s.metodoPagamento,
+    ]);
+    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'sales.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  async function exportPDF() {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    doc.text('Histórico de Vendas', 10, 10);
+    let y = 20;
+    sales.forEach((s) => {
+      doc.text(String(s.id), 10, y);
+      doc.text(new Date(s.createdAt).toLocaleString('pt-BR'), 30, y);
+      doc.text(`R$ ${s.total.toFixed(2)}`, 120, y);
+      doc.text(s.metodoPagamento, 160, y);
+      y += 10;
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+    });
+    doc.save('sales.pdf');
+  }
 
   if (loading)
     return <div className="p-6 text-white">Carregando vendas...</div>;
@@ -29,63 +96,131 @@ export default function SalesPage() {
       <div className="min-h-screen bg-gray-900 text-white p-6">
         <h1 className="text-3xl mb-6">Histórico de Vendas</h1>
 
-        {sales.length === 0 ? (
-          <p className="text-gray-400">Nenhuma venda registrada.</p>
-        ) : (
-          <div className="space-y-6">
-            {sales.map((sale) => (
-              <div key={sale.id} className="bg-gray-800 rounded-lg p-4">
-                <div className="flex justify-between mb-3">
-                  <h2 className="text-xl font-bold">Venda #{sale.id}</h2>
-                  <div className="text-right">
-                    <p className="text-green-400 font-semibold">
-                      Total: R$ {sale.total.toFixed(2)}
-                    </p>
-                    <p className="text-gray-300 text-sm">
-                      Método: {sale.metodoPagamento}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-gray-400 text-sm mb-3">
-                  {new Date(sale.createdAt).toLocaleString('pt-BR')}
-                </p>
+        <div className="bg-gray-800 p-4 rounded-lg mb-6 flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-sm mb-1">Data início</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-gray-700 p-2 rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Data fim</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-gray-700 p-2 rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Método de Pagamento</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="bg-gray-700 p-2 rounded"
+            >
+              <option value="">Todos</option>
+              <option value="Pix">Pix</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+              <option value="Cartão de Débito">Cartão de Débito</option>
+              <option value="Dinheiro">Dinheiro</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleQuickFilter(7)}
+              className="bg-blue-600 px-3 py-2 rounded"
+            >
+              Últimos 7 dias
+            </button>
+            <button
+              onClick={() => handleQuickFilter(30)}
+              className="bg-blue-600 px-3 py-2 rounded"
+            >
+              Últimos 30 dias
+            </button>
+            <button
+              onClick={resetDates}
+              className="bg-gray-600 px-3 py-2 rounded"
+            >
+              Limpar
+            </button>
+          </div>
+          <div className="ml-auto font-semibold">
+            Total: R$ {total.toFixed(2)}
+          </div>
+        </div>
 
-                <table className="w-full text-sm border-collapse border border-gray-700">
-                  <thead>
-                    <tr className="bg-gray-700">
-                      <th className="border border-gray-600 px-3 py-2">
-                        Produto
-                      </th>
-                      <th className="border border-gray-600 px-3 py-2">Qtd</th>
-                      <th className="border border-gray-600 px-3 py-2">
-                        Preço Unit.
-                      </th>
-                      <th className="border border-gray-600 px-3 py-2">
-                        Subtotal
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sale.items.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-700">
-                        <td className="border border-gray-600 px-3 py-2">
-                          {item.product?.name || 'Produto removido'}
-                        </td>
-                        <td className="border border-gray-600 px-3 py-2 text-center">
-                          {item.quantity}
-                        </td>
-                        <td className="border border-gray-600 px-3 py-2 text-right">
-                          R$ {item.price.toFixed(2)}
-                        </td>
-                        <td className="border border-gray-600 px-3 py-2 text-right">
-                          R$ {(item.price * item.quantity).toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+        <div className="flex gap-4 mb-4">
+          <button
+            onClick={exportCSV}
+            className="bg-green-600 px-4 py-2 rounded"
+          >
+            Exportar CSV
+          </button>
+          <button
+            onClick={exportPDF}
+            className="bg-green-600 px-4 py-2 rounded"
+          >
+            Exportar PDF
+          </button>
+        </div>
+
+        {sales.length === 0 ? (
+          <p className="text-gray-400">Nenhuma venda encontrada.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-700">
+                  <th className="px-3 py-2 text-left">Venda</th>
+                  <th className="px-3 py-2 text-left">Data</th>
+                  <th className="px-3 py-2 text-left">Total</th>
+                  <th className="px-3 py-2 text-left">Método</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentSales.map((sale) => (
+                  <tr key={sale.id} className="border-b border-gray-700">
+                    <td className="px-3 py-2">#{sale.id}</td>
+                    <td className="px-3 py-2">
+                      {new Date(sale.createdAt).toLocaleString('pt-BR')}
+                    </td>
+                    <td className="px-3 py-2">
+                      R$ {sale.total.toFixed(2)}
+                    </td>
+                    <td className="px-3 py-2">{sale.metodoPagamento}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {sales.length > perPage && (
+          <div className="flex justify-center items-center gap-4 mt-4">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <span>
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+            >
+              Próxima
+            </button>
           </div>
         )}
       </div>
