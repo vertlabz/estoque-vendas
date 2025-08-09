@@ -1,19 +1,17 @@
-import { useRouter } from "next/router";
+import { useRouter } from 'next/router';
 import {
   MdDashboard,
   MdInventory,
   MdAttachMoney,
   MdLogout,
   MdReceiptLong,
-} from "react-icons/md";
+} from 'react-icons/md';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Layout({ children }) {
   const router = useRouter();
+  const { logout } = useAuth();
   const goTo = (path) => router.push(path);
-  const logout = () => {
-    localStorage.removeItem("token");
-    router.push("/login");
-  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">

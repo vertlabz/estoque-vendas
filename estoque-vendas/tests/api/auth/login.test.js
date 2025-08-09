@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import handler from '../../../src/pages/api/auth/login';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
