@@ -358,7 +358,7 @@ export default function Dashboard() {
                       onClick={() => addItemsToComanda(c.id)}
                       className="w-full bg-gray-700 py-2 rounded mb-2 hover:bg-gray-600"
                     >
-                      {`Comanda #${c.id} - Cliente: ${c.clientName || 'N/A'} - Status: ${c.status}`}
+                      {` Cliente: ${c.clientName || 'N/A'} `}
                     </button>
                   ))}
                 </div>

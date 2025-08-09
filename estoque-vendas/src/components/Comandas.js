@@ -64,8 +64,7 @@ export default function Comandas() {
         className="comanda-item bg-gray-700 p-3 rounded mb-2 flex justify-between items-center"
       >
         <p>
-          Comanda #{comanda.id} - Cliente: {comanda.clientName || 'N/A'} - Status:{' '}
-          {comanda.status}
+          Cliente: {comanda.clientName || 'N/A'}
         </p>
         <button
           onClick={() => handleFinalizeComanda(comanda.id)}
