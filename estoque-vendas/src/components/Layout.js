@@ -5,6 +5,8 @@ import {
   MdAttachMoney,
   MdLogout,
   MdReceiptLong,
+  MdAnalytics,
+  
 } from 'react-icons/md';
 import { useAuth } from '@/context/AuthContext';
 
@@ -30,6 +32,9 @@ export default function Layout({ children }) {
           <button onClick={() => goTo("/sales")} title="Vendas" className="text-white text-3xl hover:text-green-400 transition">
             <MdAttachMoney />
           </button>
+          <button onClick={() => goTo("/reports")} title="Relatórios" className="text-white text-3xl hover:text-green-400 transition">
+          <MdAnalytics />
+        </button>
           <button onClick={logout} title="Logout" className="mt-auto text-red-500 text-3xl hover:text-red-700 transition">
             <MdLogout />
           </button>
