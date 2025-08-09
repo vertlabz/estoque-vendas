@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import handler from '../../../src/pages/api/sales';
 import { prisma } from '@/lib/prisma';
 
