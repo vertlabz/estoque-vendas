@@ -33,6 +33,7 @@ export default async function handler(req, res) {
       return { name: p.name || '', price, costPrice: cost, margin: price - cost };
     });
     const totalMargin = profitItems.reduce((acc, p) => acc + p.margin, 0);
+    const averageMargin = profitItems.length > 0 ? totalMargin / profitItems.length : 0;
 
     const stockItems = products.map((p) => {
       const price = p.price || 0;
@@ -56,7 +57,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       dailySales,
       monthlySales,
-      profitMargins: { items: profitItems, total: totalMargin },
+      profitMargins: { items: profitItems, total: totalMargin, average: averageMargin  },
       salesByCategory,
       stockValues: { items: stockItems, total: totalStockValue },
     });
